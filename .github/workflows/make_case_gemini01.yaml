@@ -36,10 +36,12 @@ on:
       thumb-adjustment:
         description: 'Move the thumb cluster. Format: "x,y,r" where x is the number of mm that the cluster should be moved inwards, y is the number of mm that the cluster should be moved downwards, and r is the clockwise rotation in degrees around the outermost down-most corner of the cluster.'
         default: "0,0,0"
-      # L'input 'export-step' a été retiré pour respecter la limite de 10 inputs.
-      # Vous devrez désormais l'ajouter manuellement via 'extra-options'.
+      export-step: # Nouvel input pour contrôler l'exportation STEP
+        description: 'Exports the case as STEP files.'
+        type: boolean
+        default: false
       extra-options:
-        description: 'Any additional options. E.g., add "--export-step" to export STEP files. See documentation for details.'
+        description: 'Any additional options. See documentation for details.'
         type: string
         default: ''
 jobs:
@@ -72,18 +74,17 @@ jobs:
           --thumb-type ${{ github.event.inputs['thumb-type'] }} \
           --thumb-adjustment ${{ github.event.inputs['thumb-adjustment'] }} \
           ${{ github.event.inputs['extra-options'] }} \
-          --export-stl --no-show # Note: '--export-step' doit être inclus dans 'extra-options'
-
+          --export-stl --no-show \
+          ${{ github.event.inputs['export-step'] == 'true' && '--export-step' || '' }} # Ajout de l'argument pour l'exportation STEP
+    
       - name: Archive Apiaster Case STL files
         uses: actions/upload-artifact@v4
         with:
           name: apiaster-case-stl
           path: case/stl/
 
-      - name: Archive Apiaster Case STEP files
-        # Cette étape s'exécutera si '--export-step' est présent dans 'extra-options'
-        # Le script Python gérera la création du dossier et des fichiers STEP.
-        # Nous ne pouvons pas ajouter de condition basée sur un input direct ici.
+      - name: Archive Apiaster Case STEP files # Nouvelle étape pour archiver les fichiers STEP
+        if: ${{ github.event.inputs.export-step == 'true' }} # Conditionnel pour n'archiver que si l'export STEP est activé
         uses: actions/upload-artifact@v4
         with:
           name: apiaster-case-step
