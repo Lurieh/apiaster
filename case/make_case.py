@@ -1,10 +1,8 @@
 import argparse
 import sys
 
-
 def tuple_of_ints(arg):
     return tuple(map(int, arg.split(',')))
-
 
 parser = argparse.ArgumentParser(prog='make_case.py')
 base = parser.add_argument_group('Base Settings')
@@ -12,12 +10,17 @@ component = parser.add_argument_group('Component Settings')
 keys = parser.add_argument_group('Key Settings')
 export = parser.add_argument_group('Export Settings')
 display = parser.add_argument_group('Rendering Settings')
+
 base.add_argument('--side', choices=['left', 'right'],
                   help="Which sides of the keyboard to build the case for. Note that your halves may differ e.g. in the choice of MCU. Defaults to both.")
+# Ajout de l'argument --export-step
+base.add_argument('--export-step', action="store_true",
+                  help="Save case to file as STEP")
 base.add_argument('--export-stl', action="store_true",
-                  help="Save case to file")
+                  help="Save case to file as STL")
 base.add_argument('--no-show', action="store_true",
                   help="Render case using ocp_vscode")
+
 component.add_argument('--switch', choices=['mx', 'choc'], default='choc',
                        help="What type of switches are used")
 component.add_argument('--mcu', choices=['xiao', 'rp2040-zero', 'either'], default='either',
@@ -36,6 +39,7 @@ component.add_argument('--tenting', choices=['none', 'magsafe', 'puck'], default
                        help="Integrated tenting options. A magsafe sticker (inner diameter 46mm, outer diameter 56mm, thickness 0.7mm or less) or the SplitKB tenting puck. Default: 'none'")
 component.add_argument('--smd-diodes',
                        action="store_true", help="Set this flag if you are using SMD diodes. Will slightly reduce the height of the case.")
+
 keys.add_argument('--outer-keys',
                   choices=['all', 'upper-1.5u', 'upper-1u', 'lower', 'none'], default='all', help="Which outer pinky keys should be enabled. All sets the upper key to 1.5u. Default: 'all'")
 keys.add_argument('--inner-index', choices=['all', 'reduced', 'flex'], default='flex',
@@ -50,10 +54,12 @@ keys.add_argument('--thumb-adjustment',  type=tuple_of_ints,
                   default=(0, 0, 0), help="Move the thumb cluster. --thumb-adjustment x,y,r where x is the number of mm that the cluster should be moved inwards, y is the number of mm that the cluster should be moved downwards, and r is the clockwise rotation in degrees around the outermost down-most corner of the cluster.")
 keys.add_argument('--pinkies', action="extend", nargs="*", choices=['upper', 'home', 'lower'], default=[
 ], help="Select which pinky keys to use. Default all.")
+
 component.add_argument('--expose', action="extend", nargs="*",
                        choices=['mcu', 'battery', 'usb'], default=[], help="Select components which shouldn't be covered up by the tray. Note that 'battery' only has an effect if 'coin' is selected,")
 base.add_argument('--low-case', action="store_true",
                   help="If enabled, this will lower the height of the tray and frame such that they stop at the switch snap-on point. (You may need to expose some components)")
+
 display.add_argument('--show-more', action="store_true",
                      help="Display the MCU, switches, and keycaps when rendering. Switches and Keycaps used for rendering are Choc V2 and OLS V1 R3 (Unless ripple), because I found the STEP files for these easily and no other reason.")
 display.add_argument('--tray-color', default='0xF0F0F0',
@@ -66,6 +72,7 @@ display.add_argument('--switch-color', default='0x323232',
                      help="Color to render the switches with, as a hex number. Default 0x323232")
 display.add_argument('--keycap-color', default='0xF0F0F0',
                      help="Color to render the keycaps with, as a hex number. Default 0xF0F0F0")
+
 export.add_argument('--name-suffix', default="",
                     help="Appended to the end of the filenames when exporting stls.")
 
@@ -82,7 +89,8 @@ assert not (args.battery == 'none' and args.mcu in [
             'xiao', 'either']), "Read the help message for battery selection."
 
 from src.apiaster_case import make_case, get_mcu, get_switches
-from build123d import export_stl, Pos, Rot, mirror, Plane
+# Importation de export_step de build123d
+from build123d import export_stl, export_step, Pos, Rot, mirror, Plane 
 
 if 'left' in args.side:
     left_tray, left_frame = make_case(args, left_side=True)
@@ -90,6 +98,7 @@ if 'left' in args.side:
 if 'right' in args.side:
     right_tray, right_frame = make_case(args, left_side=False)
 
+# Logique d'exportation STL existante
 if args.export_stl:
     if 'left' in args.side:
         left_tray_stl = export_stl(left_tray, f"case/stl/apiaster-left-tray{args.name_suffix}.stl")
@@ -102,6 +111,24 @@ if args.export_stl:
         right_frame_stl = export_stl(right_frame, f"case/stl/apiaster-right-frame{args.name_suffix}.stl")
         print(f"Export success case/stl/apiaster-right-tray{args.name_suffix}.stl: {right_tray_stl}")
         print(f"Export success case/stl/apiaster-right-frame{args.name_suffix}.stl: {right_frame_stl}")
+
+# Nouvelle logique d'exportation STEP
+if args.export_step:
+    # Création du dossier 'step' s'il n'existe pas
+    import os
+    os.makedirs("case/step", exist_ok=True) 
+
+    if 'left' in args.side:
+        left_tray_step = export_step(left_tray, f"case/step/apiaster-left-tray{args.name_suffix}.step")
+        left_frame_step = export_step(left_frame, f"case/step/apiaster-left-frame{args.name_suffix}.step")
+        print(f"Export success case/step/apiaster-left-tray{args.name_suffix}.step: {left_tray_step}")
+        print(f"Export success case/step/apiaster-left-frame{args.name_suffix}.step: {left_frame_step}")
+
+    if 'right' in args.side:
+        right_tray_step = export_step(right_tray, f"case/step/apiaster-right-tray{args.name_suffix}.step")
+        right_frame_step = export_step(right_frame, f"case/step/apiaster-right-frame{args.name_suffix}.step")
+        print(f"Export success case/step/apiaster-right-tray{args.name_suffix}.step: {right_tray_step}")
+        print(f"Export success case/step/apiaster-right-frame{args.name_suffix}.step: {right_frame_step}")
 
 if not args.no_show:
     from ocp_vscode import *

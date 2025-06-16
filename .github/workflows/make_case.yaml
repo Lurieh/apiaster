@@ -36,6 +36,10 @@ on:
       thumb-adjustment:
         description: 'Move the thumb cluster. Format: "x,y,r" where x is the number of mm that the cluster should be moved inwards, y is the number of mm that the cluster should be moved downwards, and r is the clockwise rotation in degrees around the outermost down-most corner of the cluster.'
         default: "0,0,0"
+      export-step: # Nouvel input pour contrôler l'exportation STEP
+        description: 'Exports the case as STEP files.'
+        type: boolean
+        default: false
       extra-options:
         description: 'Any additional options. See documentation for details.'
         type: string
@@ -70,10 +74,18 @@ jobs:
           --thumb-type ${{ github.event.inputs['thumb-type'] }} \
           --thumb-adjustment ${{ github.event.inputs['thumb-adjustment'] }} \
           ${{ github.event.inputs['extra-options'] }} \
-          --export-stl --no-show
+          --export-stl --no-show \
+          ${{ github.event.inputs['export-step'] == 'true' && '--export-step' || '' }} # Ajout de l'argument pour l'exportation STEP
     
       - name: Archive Apiaster Case STL files
         uses: actions/upload-artifact@v4
         with:
           name: apiaster-case-stl
           path: case/stl/
+
+      - name: Archive Apiaster Case STEP files # Nouvelle étape pour archiver les fichiers STEP
+        if: ${{ github.event.inputs.export-step == 'true' }} # Conditionnel pour n'archiver que si l'export STEP est activé
+        uses: actions/upload-artifact@v4
+        with:
+          name: apiaster-case-step
+          path: case/step/
