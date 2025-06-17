@@ -1,5 +1,6 @@
 import argparse
 import sys
+import os # Importation de os pour créer le dossier 'step'
 
 def tuple_of_ints(arg):
     return tuple(map(int, arg.split(',')))
@@ -14,8 +15,8 @@ display = parser.add_argument_group('Rendering Settings')
 base.add_argument('--side', choices=['left', 'right'],
                   help="Which sides of the keyboard to build the case for. Note that your halves may differ e.g. in the choice of MCU. Defaults to both.")
 # Ajout de l'argument --export-step
-# base.add_argument('--export-step', action="store_true",
-#                   help="Save case to file as STEP")
+base.add_argument('--export-step', action="store_true",
+                  help="Save case to file as STEP")
 base.add_argument('--export-stl', action="store_true",
                   help="Save case to file as STL")
 base.add_argument('--no-show', action="store_true",
@@ -73,10 +74,8 @@ display.add_argument('--switch-color', default='0x323232',
 display.add_argument('--keycap-color', default='0xF0F0F0',
                      help="Color to render the keycaps with, as a hex number. Default 0xF0F0F0")
 
-export.add_argument('--export-step', action="store_true",
-                    help="Save STEP files instead of or in addition to STL.")
-# export.add_argument('--name-suffix', default="",
-#                     help="Appended to the end of the filenames when exporting stls.")
+export.add_argument('--name-suffix', default="", # C'est cette ligne qui définit 'name_suffix'
+                    help="Appended to the end of the filenames when exporting stls.")
 
 args = parser.parse_args(sys.argv[1:])
 
@@ -117,7 +116,6 @@ if args.export_stl:
 # Nouvelle logique d'exportation STEP
 if args.export_step:
     # Création du dossier 'step' s'il n'existe pas
-    import os
     os.makedirs("case/step", exist_ok=True) 
 
     if 'left' in args.side:
